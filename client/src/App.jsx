@@ -2,53 +2,56 @@ import { useState } from "react";
 import "./App.css";
 
 function App() {
-  const [ticket, setTicket] = useState("");
-  const [result, setResult] = useState("");
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState("");
 
-  async function handleAnalyze() {
-    const cleanedTicket = ticket.trim();
-  
-    if (cleanedTicket === "") {
-      setResult("Please enter a support ticket.");
+  async function handleSend(event) {
+    event.preventDefault();
+
+    const text = input.trim();
+
+    if (text === "" || isSending) {
       return;
     }
-  
-    setResult("Analyzing...");
-  
+
+    setMessages(previous => [
+      ...previous,
+      { role: "user", content: text }
+    ]);
+
+    setInput("");
+    setError("");
+    setIsSending(true);
+
     try {
-      const response = await fetch("/api/analyze", {
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          ticket: cleanedTicket
-        })
+        body: JSON.stringify({ message: text })
       });
-  
-      const data = await response.json();
-  
+
       if (!response.ok) {
-        throw new Error(data.error || `HTTP ${response.status}`);
+        throw new Error(`Request failed: HTTP ${response.status}`);
       }
-  
-      setResult(data.analysis);
-    } catch (error) {
-      setResult(`Analysis failed: ${error.message}`);
-    }
-  }
-  async function checkBackend() {
-    try {
-      const response = await fetch("/api/health");
-  
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-  
+
       const data = await response.json();
-      setResult(data.message);
+
+      if (typeof data.reply !== "string") {
+        throw new Error("The backend did not return a reply.");
+      }
+
+      setMessages(previous => [
+        ...previous,
+        { role: "assistant", content: data.reply }
+      ]);
     } catch (error) {
-      setResult(`Could not reach the backend: ${error.message}`);
+      setError(error.message);
+    } finally {
+      setIsSending(false);
     }
   }
 
@@ -56,21 +59,44 @@ function App() {
     <main>
       <h1>Local Chatbot</h1>
 
-      <label htmlFor="ticket">Enter your support ticket:</label>
+      <section className="conversation" aria-label="Conversation" role="log">
+        {messages.length === 0 && (
+          <p className="empty-chat">Say hello to start a conversation.</p>
+        )}
 
-      <textarea
-        id="ticket"
-        rows={8}
-        value={ticket}
-        onChange={(event) => setTicket(event.target.value)}
-        placeholder="Describe the issue..."
-      />
+        {messages.map((message, index) => (
+          <div
+            key={index}
+            className={`message ${message.role}`}
+          >
+            <strong>
+              {message.role === "user" ? "You" : "Chatbot"}
+            </strong>
+            <p>{message.content}</p>
+          </div>
+        ))}
 
-      <button onClick={handleAnalyze}>Analyze</button>
-      <button onClick={checkBackend}>Check backend</button>
+        {isSending && <p>Chatbot is replying...</p>}
+      </section>
 
-      <h2>Results</h2>
-      <p>{result || "Your analysis will appear here."}</p>
+      <form onSubmit={handleSend}>
+        <label htmlFor="message">Your message</label>
+
+        <input
+          id="message"
+          type="text"
+          value={input}
+          onChange={event => setInput(event.target.value)}
+          placeholder="Type a message..."
+          autoComplete="off"
+        />
+
+        <button type="submit" disabled={isSending || input.trim() === ""}>
+          {isSending ? "Sending..." : "Send"}
+        </button>
+      </form>
+
+      {error && <p role="alert">{error}</p>}
     </main>
   );
 }
