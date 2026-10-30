@@ -54,7 +54,7 @@ function App() {
 
   return (
     <main>
-      <h1>Ticket Analyzer</h1>
+      <h1>Local Chatbot</h1>
 
       <label htmlFor="ticket">Enter your support ticket:</label>
 

@@ -19,7 +19,7 @@ app.post("/api/analyze", function (request, response) {
     }
   
     response.json({
-      analysis: `Backend received your ticket: ${ticket.trim()}`
+      analysis: `You submitted: ${ticket.trim()}`
     });
   });
 
