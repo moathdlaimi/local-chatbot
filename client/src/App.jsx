@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 function App() {
@@ -6,6 +6,7 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
+  const conversationRef = useRef(null);
 
   async function handleSend(event) {
     event.preventDefault();
@@ -55,11 +56,19 @@ function App() {
     }
   }
 
+useEffect(() => {
+  const conversation = conversationRef.current;
+
+  if (conversation) {
+    conversation.scrollTop = conversation.scrollHeight;
+  }
+}, [messages]);
+
   return (
     <main>
       <h1>Local Chatbot</h1>
 
-      <section className="conversation" aria-label="Conversation" role="log">
+      <section ref={conversationRef} className="conversation" aria-label="Conversation" role="log">
         {messages.length === 0 && (
           <p className="empty-chat">Say hello to start a conversation.</p>
         )}
